@@ -1,8 +1,20 @@
-self.addEventListener("install", (event) => {
-  console.log("Service Worker instalado");
-  self.skipWaiting();
+const CACHE_NAME = 'canastos-v1';
+const urlsToCache = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
 });
 
-self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request).catch(() => new Response("Sin conexión")));
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(resp => resp || fetch(e.request))
+  );
 });
