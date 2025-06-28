@@ -1,10 +1,11 @@
 {
-  "name": "Canastos y Bolsos",
+  "name": "Registro de Canastos y Bolsos",
   "short_name": "Canastos",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#10b981",
+  "description": "App para registrar pedidos, canastos y bolsos por cadete.",
   "icons": [
     {
       "src": "icon-192.png",
