@@ -96,6 +96,7 @@
         <option value="173994">Aguilar (173994)</option>
         <option value="174947">Cutipa (174947)</option>
         <option value="185479">Lucero (185479)</option>
+        <option value="158185">Romero (158185)</option>
         <option value="170202">Barrera (170202)</option>
         <option value="nuevo">➕ Agregar nuevo cadete</option>
       </select>
@@ -134,164 +135,208 @@
     "173994": "Aguilar",
     "174947": "Cutipa",
     "185479": "Lucero",
+    "158185": "Romero",
     "170202": "Barrera"
-  };
+};
 
-  const cadeteSelect = document.getElementById("cadete");
-  const pedidoInput = document.getElementById("pedido");
-  const canastosInput = document.getElementById("canastos");
-  const bolsosInput = document.getElementById("bolsos");
-  const tablaBody = document.getElementById("tablaDatos");
-  const nombreCadete = document.getElementById("nombreCadete");
-  const totalesDiv = document.getElementById("totales");
+const cadeteSelect = document.getElementById("cadete");
+const pedidoInput = document.getElementById("pedido");
+const canastosInput = document.getElementById("canastos");
+const bolsosInput = document.getElementById("bolsos");
+const nombreCadete = document.getElementById("nombreCadete");
+const tablaBody = document.getElementById("tablaDatos");
+const totalesDiv = document.getElementById("totales");
 
-  let registros = [];
-  let legajoActual = "";
-  let cadeteActual = "";
+let registros = [];
+let cadeteActual = "";
+let legajoActual = "";
 
-  function cargarRegistros(legajo) {
-    const datos = localStorage.getItem("registros_" + legajo);
-    registros = datos ? JSON.parse(datos) : [];
-    renderTabla();
+function cargarRegistros(legajo) {
+  const datos = localStorage.getItem("registros_" + legajo);
+  registros = datos ? JSON.parse(datos) : [];
+  renderTabla();
+}
+
+function guardarRegistros() {
+  if (legajoActual) {
+    localStorage.setItem("registros_" + legajoActual, JSON.stringify(registros));
   }
+}
 
-  function guardarRegistros() {
-    if (legajoActual) {
-      localStorage.setItem("registros_" + legajoActual, JSON.stringify(registros));
-    }
-  }
-
-  function renderTabla() {
-    tablaBody.innerHTML = "";
-    let totalCanastos = 0;
-    let totalBolsos = 0;
-
-    registros.forEach(reg => {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${reg.pedido}</td><td>${reg.canastos}</td><td>${reg.bolsos}</td>`;
-      tablaBody.appendChild(row);
-      totalCanastos += reg.canastos;
-      totalBolsos += reg.bolsos;
-    });
-
-    totalesDiv.textContent = `Canastos: ${totalCanastos} | Bolsos: ${totalBolsos}`;
-    guardarRegistros();
-  }
-
-  function limpiarInputs() {
-    pedidoInput.value = "";
-    canastosInput.value = "";
-    bolsosInput.value = "";
-  }
-
-  function agregarRegistro() {
-    let pedido = pedidoInput.value.trim();
-    const canastos = parseInt(canastosInput.value) || 0;
-    const bolsos = parseInt(bolsosInput.value) || 0;
-
-    if (!cadeteActual) {
-      alert("Seleccioná un cadete válido.");
+cadeteSelect.addEventListener("change", () => {
+  const legajo = cadeteSelect.value;
+  if (legajo === "nuevo") {
+    const nuevoLegajo = prompt("Ingresá el legajo del nuevo cadete:");
+    if (!nuevoLegajo || !/^\d+$/.test(nuevoLegajo)) {
+      alert("Legajo inválido.");
+      cadeteSelect.value = "";
       return;
     }
 
-    if (!pedido) {
+    const nuevoNombre = prompt("Ingresá el nombre del nuevo cadete:");
+    if (!nuevoNombre || nuevoNombre.trim().length < 2) {
+      alert("Nombre inválido.");
+      cadeteSelect.value = "";
+      return;
+    }
+
+    cadetes[nuevoLegajo] = nuevoNombre;
+    const nuevaOpcion = document.createElement("option");
+    nuevaOpcion.value = nuevoLegajo;
+    nuevaOpcion.textContent = `${nuevoNombre} (${nuevoLegajo})`;
+    cadeteSelect.insertBefore(nuevaOpcion, cadeteSelect.querySelector('option[value="nuevo"]'));
+
+    cadeteSelect.value = nuevoLegajo;
+    cadeteActual = nuevoNombre;
+    legajoActual = nuevoLegajo;
+    nombreCadete.textContent = "Cadete: " + cadeteActual;
+    cargarRegistros(nuevoLegajo);
+    pedidoInput.focus();
+  } else if (cadetes[legajo]) {
+    cadeteActual = cadetes[legajo];
+    legajoActual = legajo;
+    nombreCadete.textContent = "Cadete: " + cadeteActual;
+    cargarRegistros(legajo);
+    pedidoInput.focus();
+  } else {
+    cadeteActual = "";
+    legajoActual = "";
+    registros = [];
+    nombreCadete.textContent = "Cadete: —";
+    renderTabla();
+  }
+});
+
+pedidoInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    if (!/^\d+$/.test(pedidoInput.value.trim())) {
+      alert("El N° de Pedido debe ser solo números.");
+      return;
+    }
+    canastosInput.focus();
+  }
+});
+
+canastosInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") bolsosInput.focus();
+});
+
+bolsosInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (!pedidoInput.value.trim()) {
       let numeros = registros.map(r => parseInt(r.pedido)).filter(n => !isNaN(n));
-      let max = numeros.length ? Math.max(...numeros) : 0;
-      pedido = (max + 1).toString();
+      let max = numeros.length > 0 ? Math.max(...numeros) : 0;
+      pedidoInput.value = (max + 1).toString();
     }
+    agregarRegistro();
+  }
+});
 
-    const index = registros.findIndex(r => r.pedido === pedido);
-    if (index !== -1) {
-      registros[index].canastos = canastos;
-      registros[index].bolsos = bolsos;
-    } else {
-      registros.push({ pedido, canastos, bolsos });
-    }
+function agregarRegistro() {
+  let pedido = pedidoInput.value.trim();
+  const canastos = parseInt(canastosInput.value) || 0;
+  const bolsos = parseInt(bolsosInput.value) || 0;
 
+  if (!cadeteActual || !legajoActual) {
+    alert("Seleccioná un cadete válido.");
+    return;
+  }
+
+  if (!pedido) {
+    const numeros = registros.map(r => parseInt(r.pedido)).filter(n => !isNaN(n));
+    pedido = ((Math.max(...numeros, 0) + 1)).toString();
+    pedidoInput.value = pedido;
+  } else if (!/^\d+$/.test(pedido)) {
+    alert("N° de Pedido inválido.");
+    return;
+  }
+
+  const index = registros.findIndex(r => r.pedido === pedido);
+  if (index !== -1) {
+    registros[index].canastos = canastos;
+    registros[index].bolsos = bolsos;
+  } else {
+    registros.push({ pedido, canastos, bolsos });
+  }
+
+  guardarRegistros();
+  renderTabla();
+  limpiarInputs();
+  pedidoInput.focus();
+}
+
+function renderTabla() {
+  tablaBody.innerHTML = "";
+  let totalCanastos = 0;
+  let totalBolsos = 0;
+
+  registros.forEach(r => {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${r.pedido}</td><td>${r.canastos}</td><td>${r.bolsos}</td>`;
+    tablaBody.appendChild(row);
+    totalCanastos += r.canastos;
+    totalBolsos += r.bolsos;
+  });
+
+  totalesDiv.textContent = `Canastos: ${totalCanastos} | Bolsos: ${totalBolsos}`;
+}
+
+function limpiarInputs() {
+  pedidoInput.value = "";
+  canastosInput.value = "";
+  bolsosInput.value = "";
+}
+
+function reiniciarTabla() {
+  if (!legajoActual) return;
+  if (confirm("¿Seguro que querés borrar todos los datos del cadete actual?")) {
+    registros = [];
+    localStorage.removeItem("registros_" + legajoActual);
     renderTabla();
     limpiarInputs();
     pedidoInput.focus();
   }
+}
 
-  function imprimirResumen() {
-    if (!cadeteActual || registros.length === 0) {
-      alert("Seleccioná un cadete y cargá al menos un pedido.");
-      return;
-    }
-
-    const fecha = new Date().toLocaleString("es-AR");
-    let tabla = `
-      <html><head><title>Resumen</title>
-      <style>
-        body { font-family: Arial; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: center; }
-        .footer { margin-top: 30px; }
-      </style></head><body>
-      <h2>Resumen de Reparto</h2>
-      <table>
-        <thead><tr><th>Pedido</th><th>Canastos</th><th>Bolsos</th></tr></thead>
-        <tbody>`;
-
-    let totalC = 0, totalB = 0;
-    registros.forEach(r => {
-      tabla += `<tr><td>${r.pedido}</td><td>${r.canastos}</td><td>${r.bolsos}</td></tr>`;
-      totalC += r.canastos;
-      totalB += r.bolsos;
-    });
-
-    tabla += `</tbody><tfoot><tr><td><b>Total</b></td><td>${totalC}</td><td>${totalB}</td></tr></tfoot></table>
-      <div class="footer">
-        <p>Cadete: <b>${cadeteActual}</b> (${legajoActual})</p>
-        <p>Fecha: ${fecha}</p>
-      </div></body></html>`;
-
-    const win = window.open("", "_blank");
-    win.document.write(tabla);
-    win.document.close();
-    win.focus();
-    win.print();
+function imprimirResumen() {
+  if (!cadeteActual || registros.length === 0) {
+    alert("No hay datos o no se seleccionó un cadete.");
+    return;
   }
 
-  function reiniciarTabla() {
-    if (confirm("¿Borrar todos los registros del cadete actual?")) {
-      registros = [];
-      localStorage.removeItem("registros_" + legajoActual);
-      renderTabla();
-    }
-  }
+  const ahora = new Date();
+  const fechaHora = ahora.toLocaleDateString('es-AR') + " " +
+                    ahora.toLocaleTimeString('es-AR', { hour: "2-digit", minute: "2-digit" });
 
-  cadeteSelect.addEventListener("change", () => {
-    const legajo = cadeteSelect.value;
-    if (legajo === "nuevo") {
-      const nuevoLegajo = prompt("Legajo:");
-      const nuevoNombre = prompt("Nombre:");
-      if (!nuevoLegajo || !nuevoNombre) return;
-      cadetes[nuevoLegajo] = nuevoNombre;
-      const opt = document.createElement("option");
-      opt.value = nuevoLegajo;
-      opt.textContent = `${nuevoNombre} (${nuevoLegajo})`;
-      cadeteSelect.insertBefore(opt, cadeteSelect.querySelector('option[value="nuevo"]'));
-      cadeteSelect.value = nuevoLegajo;
-    }
-    cadeteActual = cadetes[cadeteSelect.value];
-    legajoActual = cadeteSelect.value;
-    nombreCadete.textContent = "Cadete: " + cadeteActual;
-    cargarRegistros(legajoActual);
-    pedidoInput.focus();
+  let html = `
+    <html><head><title>Resumen</title><style>
+    body { font-family: Arial; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #444; padding: 10px; text-align: center; }
+    </style></head><body>
+    <h2>Resumen de Reparto</h2>
+    <p><strong>Cadete:</strong> ${cadeteActual} (${legajoActual})<br>
+    <strong>Fecha:</strong> ${fechaHora}</p>
+    <table><thead><tr><th>Pedido</th><th>Canastos</th><th>Bolsos</th></tr></thead><tbody>`;
+
+  let totalCanastos = 0;
+  let totalBolsos = 0;
+
+  registros.forEach(r => {
+    html += `<tr><td>${r.pedido}</td><td>${r.canastos}</td><td>${r.bolsos}</td></tr>`;
+    totalCanastos += r.canastos;
+    totalBolsos += r.bolsos;
   });
 
-  pedidoInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") canastosInput.focus();
-  });
+  html += `</tbody><tfoot><tr><td><strong>Total</strong></td><td>${totalCanastos}</td><td>${totalBolsos}</td></tr></tfoot></table></body></html>`;
 
-  canastosInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") bolsosInput.focus();
-  });
-
-  bolsosInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") agregarRegistro();
-  });
+  const ventana = window.open("", "_blank");
+  ventana.document.write(html);
+  ventana.document.close();
+  ventana.focus();
+  ventana.print();
+}
 </script>
 </body>
 </html>
